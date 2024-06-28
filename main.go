@@ -21,7 +21,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-var connections []*websocket.Conn
+var connections = make(map[string]*websocket.Conn)
 
 func RemoveIndex(s []*websocket.Conn, index int) []*websocket.Conn {
 	return append(s[:index], s[index+1:]...)
@@ -35,20 +35,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println("New Client", conn.RemoteAddr().String())
-	connections = append(connections, conn)
+
+	connections[conn.RemoteAddr().String()] = conn
 
 	for {
 		messageType, p, err := conn.ReadMessage()
 		if err != nil {
-			indexToRemove := -1
-			for index, connection := range connections {
-				if connection.RemoteAddr().String() == conn.RemoteAddr().String() {
-					indexToRemove = index
-				}
-			}
-			if indexToRemove > -1 {
-				connections = RemoveIndex(connections, indexToRemove)
-			}
+			delete(connections, conn.RemoteAddr().String())
 			fmt.Println("Client Disconnected", conn.RemoteAddr().String())
 			return
 		}
